@@ -176,3 +176,4 @@ cython_debug/
 *.db
 *.sqlite
 *.json
+.test_jsons/
