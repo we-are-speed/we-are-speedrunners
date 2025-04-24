@@ -2,7 +2,7 @@ import time
 
 import requests
 import json
-from webcrawler_database import create_connection, initialize_database, insert_users, insert_category_type, insert_users_final
+from webcrawler_database import create_connection, initialize_database, insert_users, insert_speedruns
 
 def get_api_data(url):
     try:
@@ -11,14 +11,12 @@ def get_api_data(url):
         return response.json()  # Parse JSON response
     except requests.exceptions.RequestException as e:
         print(f"Error making request: {e}")
-        with open('errors.txt', 'a', encoding='utf-8') as f:
-            f.write(f"Error making request: {e}\n")
         return None
 
-def get_all_users_from_game(game_id_txt):
-    all_player_ids = set()  # Using set to avoid duplicates
-
-    with open(game_id_txt, 'r') as file:
+def get_games_any_percent_runs(game_id_txt):
+    # filter to only get games that have an any% full game run without any variables
+    games_any_percent_runs = []
+    with (open(game_id_txt, 'r') as file):
         for line in file:
             game = line.strip()
             title = game.split('-')[0].strip().replace(' ', '%20')
@@ -29,36 +27,48 @@ def get_all_users_from_game(game_id_txt):
 
             game_id = game_url['data'][0]['id']
             print(f"Processing game: {game_id}")
+            game_categories = game_url['data'][0]['categories']
 
-            if isinstance(game_url, dict):
-                data = game_url.get('data')
-                data_list = data if isinstance(data, list) else [data]
+            try:
+                for category in game_categories['data']:
+                    if category['name'] == 'Any%':
+                        # add to array
+                        games_any_percent_runs.append(game_id)
+                        with open('speedrun_data/games_with_any_percent.txt', 'a', encoding='utf-8') as f:
+                            f.write(f"{game_id} - {category['id']}\n")
+            except(KeyError, IndexError, TypeError):
+                print("does not have categories")
 
-                for item in data_list:
-                    if isinstance(item, dict) and 'categories' in item:
-                        categories = item['categories']
-                        if isinstance(categories, dict) and 'data' in categories:
-                            for category in categories['data']:
-                                if isinstance(category, dict) and 'id' in category and category.get(
-                                        'type') == 'per-game':
-                                    print(f"Processing category: {category['id']}")
 
-                                    # Get only first page of leaderboard
-                                    api_url = f"https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category['id']}?embed=players"
-                                    game_data = get_api_data(api_url)
+# get all of the players from the leaderboard of celeste
+# then run get_users_games to get all of the other games that they run and the times for it??
+# mark down whether it was a per-game run or per-level = per game means it's a full game run
 
-                                    if game_data and isinstance(game_data, dict):
-                                        players = game_data.get('data', {}).get('players', {}).get('data', [])
-                                        for player in players:
-                                            if isinstance(player, dict) and 'id' in player:
-                                                all_player_ids.add(player['id'])
+def celeste_game_runners():
+    celeste_leaderboard = get_api_data(f"https://www.speedrun.com/api/v1/leaderboards/o1y9j9v6/category/7kjpl1gk")
+    for each_run in celeste_leaderboard['data']['runs']:
+        placement = each_run['place']
 
-    # Write all unique player IDs to file once
-    with open('player_ids.txt', 'w', encoding='utf-8') as f:
-        for player_id in all_player_ids:
-            f.write(f"{player_id}\n")
+        run = each_run['run']
+        player_id = run['players'][0]['id']
 
-    print(f"Found {len(all_player_ids)} unique player IDs (first page only)")
+        # get the player info
+        player_url = get_api_data(f"https://www.speedrun.com/api/v1/users/{player_id}")
+        try:
+            player_pronouns = player_url['data']['pronouns']
+        except (KeyError, IndexError, TypeError):
+            player_pronouns = None
+
+        try:
+            player_signup = player_url['data']['signup']
+        except (KeyError, IndexError, TypeError):
+            player_signup = None
+
+        try:
+            player_location = player_url['data']['location']['country']['names']['international']
+        except(KeyError, IndexError, TypeError):
+            player_location = None
+
 
 def get_users_games(player_ids_txt, connection):
     with open(player_ids_txt, 'r') as file:
@@ -85,7 +95,6 @@ def get_users_games(player_ids_txt, connection):
 
             if player_pb_url == None:
                 print("ERROR: " + line)
-                time.sleep(60)
                 continue
 
             for entry in player_pb_url['data']:
@@ -101,22 +110,25 @@ def get_users_games(player_ids_txt, connection):
                     game_genre = None
                 run_id = entry['run']['id']
                 run_time = entry['run']['times']['primary_t']
-                category_type = entry['category']['data']['type']
+                isFull = entry['category']['data']['type']
 
-                #insert_users(connection, line, game_id, game_name, game_genre, run_id, run_time, player_location, player_pronouns, player_signup)
-                insert_users_final(connection, line, game_id, game_name, game_genre, run_id, run_time, category_type, player_location, player_pronouns, player_signup)
+                insert_users(connection, line, game_id, game_name, game_genre, run_id, run_time, player_location, player_pronouns, player_signup)
                 connection.commit()
 
-connection = create_connection('new_database.sqlite')
-initialize_database(connection)
+# def get_games_leaderboard():
+    # for each game, go into the leaderboard for the any% category
 
-#get_all_users_from_game('speedrun_data/games_2.txt')
+#
+# connection = create_connection('new_database.sqlite')
+# initialize_database(connection)
+#
+# #get_all_users_from_game('speedrun_data/games.txt')
+#
+# get_users_games('player_ids.txt', connection)
+#
+# connection.close()
 
-get_users_games('player_ids.txt', connection)
-
-#insert_extra_categories(connection)
-
-connection.close()
+get_games_any_percent_runs('speedrun_data/games.txt')
 
 # connection = create_connection('database.sqlite')
 # initialize_database(connection)
