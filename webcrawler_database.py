@@ -62,6 +62,23 @@ def initialize_database(connection):
                         )
         ''')
 
+    cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS celeste_players (
+                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                            PlayerID TEXT NOT NULL,
+                            GameID TEXT NOT NULL,
+                            GameName TEXT NOT NULL,
+                            GameGenre TEXT,
+                            RunID TEXT NOT NULL,
+                            RunTime FLOAT NOT NULL,
+                            Category TEXT NOT NULL,
+                            CategoryType TEXT NOT NULL,
+                            PlayerCountry TEXT,
+                            PlayerPronouns TEXT,
+                            PlayerSignupDate TEXT
+                            )
+            ''')
+
 def insert_speedruns(connection, player_id, game_id, game_name, category_id, full_game_category, category_name, category_var, run_id, player_ids, run_date_submitted, run_date_verified, run_time, game_region, game_platform, is_emulated, player_country, player_account_signup_date, player_pronouns):
     cursor = connection.cursor()
     cursor.execute('INSERT INTO speedruns(PlayerID, GameID, GameName, CategoryID, FullGameCategory, CategoryName, CategoryVariables, RunID, PlayerIDs, RunDateSubmitted, RunDateVerified, RunTime, GameRegion, GamePlatform, isEmulated, PlayerCountry, PlayerAccountSignupDate, PlayerPronouns) '
@@ -95,5 +112,14 @@ def insert_category_type(connection, player_id, run_id, category_type):
         'VALUES (?, ?, ?)',
         (player_id, run_id, category_type)
     )
+    connection.commit()
+    return cursor.lastrowid
+
+def insert_celeste(connection, player_id, game_id, game_name, game_genre, run_id, run_time, category, category_type, player_country, player_pronouns, player_signup_date):
+    cursor = connection.cursor()
+    cursor.execute(
+        'INSERT INTO celeste_players(PlayerID, GameID, GameName, GameGenre, RunID, RunTime, Category, CategoryType, PlayerCountry, PlayerPronouns, PlayerSignupDate) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (player_id, game_id, game_name, game_genre, run_id, run_time, category, category_type, player_country, player_pronouns, player_signup_date))
     connection.commit()
     return cursor.lastrowid

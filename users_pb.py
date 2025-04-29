@@ -2,7 +2,7 @@ import time
 
 import requests
 import json
-from webcrawler_database import create_connection, initialize_database, insert_users, insert_category_type, insert_users_final
+from webcrawler_database import create_connection, initialize_database, insert_users, insert_category_type, insert_users_final, insert_celeste
 
 def get_api_data(url):
     try:
@@ -11,11 +11,11 @@ def get_api_data(url):
         return response.json()  # Parse JSON response
     except requests.exceptions.RequestException as e:
         print(f"Error making request: {e}")
-        with open('errors.txt', 'a', encoding='utf-8') as f:
+        with open('errors_celeste.txt', 'a', encoding='utf-8') as f:
             f.write(f"Error making request: {e}\n")
         return None
 
-def get_all_users_from_game(game_id_txt):
+def get_all_users_from_game(game_id_txt, game_output_txt):
     all_player_ids = set()  # Using set to avoid duplicates
 
     with open(game_id_txt, 'r') as file:
@@ -54,7 +54,7 @@ def get_all_users_from_game(game_id_txt):
                                                 all_player_ids.add(player['id'])
 
     # Write all unique player IDs to file once
-    with open('player_ids.txt', 'w', encoding='utf-8') as f:
+    with open(game_output_txt, 'w', encoding='utf-8') as f:
         for player_id in all_player_ids:
             f.write(f"{player_id}\n")
 
@@ -102,17 +102,19 @@ def get_users_games(player_ids_txt, connection):
                 run_id = entry['run']['id']
                 run_time = entry['run']['times']['primary_t']
                 category_type = entry['category']['data']['type']
+                category = entry['category']['data']['name']
 
                 #insert_users(connection, line, game_id, game_name, game_genre, run_id, run_time, player_location, player_pronouns, player_signup)
-                insert_users_final(connection, line, game_id, game_name, game_genre, run_id, run_time, category_type, player_location, player_pronouns, player_signup)
+                #insert_users_final(connection, line, game_id, game_name, game_genre, run_id, run_time, category_type, player_location, player_pronouns, player_signup)
+                insert_celeste(connection, line, game_id, game_name, game_genre, run_id, run_time, category, category_type, player_location, player_pronouns, player_signup)
                 connection.commit()
 
 connection = create_connection('new_database.sqlite')
 initialize_database(connection)
 
-#get_all_users_from_game('speedrun_data/games_2.txt')
+#get_all_users_from_game('speedrun_data/celeste.txt','celeste_players.txt')
 
-get_users_games('player_ids.txt', connection)
+get_users_games('celeste_players.txt', connection)
 
 #insert_extra_categories(connection)
 
