@@ -105,16 +105,19 @@ def get_users_games(player_ids_txt, connection):
                 category = entry['category']['data']['name']
 
                 #insert_users(connection, line, game_id, game_name, game_genre, run_id, run_time, player_location, player_pronouns, player_signup)
-                #insert_users_final(connection, line, game_id, game_name, game_genre, run_id, run_time, category_type, player_location, player_pronouns, player_signup)
-                insert_celeste(connection, line, game_id, game_name, game_genre, run_id, run_time, category, category_type, player_location, player_pronouns, player_signup)
+                insert_users_final(connection, line, game_id, game_name, game_genre, run_id, run_time, category_type, player_location, player_pronouns, player_signup)
+                #insert_celeste(connection, line, game_id, game_name, game_genre, run_id, run_time, category, category_type, player_location, player_pronouns, player_signup)
                 connection.commit()
 
 connection = create_connection('new_database.sqlite')
 initialize_database(connection)
 
+get_all_users_from_game('speedrun_data/games.txt', 'speedrun_data/games_output.txt')
+get_users_games('speedrun_data/games_output.txt', connection)
+
 #get_all_users_from_game('speedrun_data/celeste.txt','celeste_players.txt')
 
-get_users_games('celeste_players.txt', connection)
+#get_users_games('celeste_players.txt', connection)
 
 #insert_extra_categories(connection)
 
